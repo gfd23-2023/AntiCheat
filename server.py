@@ -1,7 +1,21 @@
 #Simple server for capturing network traffic
-#Runs with: pyhton3 server.py
 
+'''
+In the first execution:
+1. Generating the certfile:
+    openssl req -x509 -newkey rsa:2048 -nodes \
+    -keyout key.pem -out cert.pem -deys 365 \
+    -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
+2. Runing the server:
+    python3 server.py
+
+3. Testing in other terminal:
+    curl --cacert cer.pem https://localhost:8443/status
+'''
+
+import ssl
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 class Handler(BaseHTTPRequestHandler):
@@ -38,8 +52,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b'Updated\n')
 
 if __name__ == '__main__':
-    server = HTTPServer(('0.0.0.0', 8000), Handler)
-    print('Server online in: http://0.0.0.0:8000 (Ctrl + C to stop)')
+    server = HTTPServer(('0.0.0.0', 8443), Handler)
+    
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+
+    print('Server online in: https://0.0.0.0:8443 (Ctrl + C to stop)')
     try:
         server.serve_forever()
     except KeyboardInterrupt:
